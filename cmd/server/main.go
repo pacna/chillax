@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"github.com/pacna/chillax/internal/fs"
+	"github.com/pacna/chillax/internal/router"
+)
 
 func main() {
-	fmt.Println("Hello World")
+	router.New(fs.UIDist).RegisterRouter().Serve()
 }
