@@ -9,6 +9,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@material/web": "^1.0.0-pre.15",
         "lit": "^2.7.6"
     },
     "devDependencies": {
