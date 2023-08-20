@@ -15,10 +15,10 @@ type Router struct {
 	muxRouter *mux.Router
 }
 
-func New(fs fs.ReadFileFS) *Router {
+func New(fs fs.ReadFileFS, port string) *Router {
 	router := &Router{
 		Server: &http.Server{
-			Addr:         "0.0.0.0:5000",
+			Addr:         fmt.Sprintf("0.0.0.0:%s", port),
 			WriteTimeout: 15 * time.Second,
 			ReadTimeout:  15 * time.Second,
 		},
