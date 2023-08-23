@@ -1,3 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwind.css";
+
+/*HACK to avoid user to turn on/off the youtube video*/
+#player {
+    pointer-events: none;
+}
