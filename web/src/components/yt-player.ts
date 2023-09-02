@@ -13,7 +13,6 @@ export class YTPlayer extends TWElement {
 
     constructor() {
         super();
-        this.videoId = "M7lc1UVf-VE";
         this.loadYoutubeApi();
     }
 
@@ -30,8 +29,8 @@ export class YTPlayer extends TWElement {
         this.player = new window.YT.Player(
             this.shadowRoot.getElementById("player"),
             {
-                height: "390",
-                width: "640",
+                height: "640",
+                width: "1140",
                 videoId: this.videoId,
                 playerVars: {
                     controls: 0,
@@ -65,8 +64,12 @@ export class YTPlayer extends TWElement {
 
     render(): TemplateResult {
         return html`
-            <div id="player"></div>
-            <md-slider class="mt-4 w-[640px]"></md-slider>
+            <article class="animate-fade">
+                <div id="player" class="pointer-events-none"></div>
+                <section>
+                    <md-slider class="mt-4 w-[1140px]"></md-slider>
+                </section>
+            </article>
         `;
     }
 }
