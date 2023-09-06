@@ -5,14 +5,11 @@ import (
 	"io/fs"
 	"net/http"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 type Router struct {
 	*http.Server
 	fs.ReadFileFS
-	muxRouter *mux.Router
 }
 
 func New(fs fs.ReadFileFS, port string) *Router {
@@ -23,18 +20,23 @@ func New(fs fs.ReadFileFS, port string) *Router {
 			ReadTimeout:  15 * time.Second,
 		},
 		ReadFileFS:   fs,
-		muxRouter:  mux.NewRouter(),
 	}
 
 	return router
 }
 
-func (router *Router) RegisterRouter() *Router {
-	router.muxRouter.PathPrefix("/").Handler(spa{ReadFileFS: router.ReadFileFS})
-	http.Handle("/", router.muxRouter)
+func (router *Router) RegisterSPA() *Router {
+	http.Handle("/", spa{ReadFileFS: router.ReadFileFS})
 
 	return router
 }
+
+func (router *Router) RegisterSocket() *Router {
+	http.Handle("/ws", socket{})
+
+	return router;
+}
+
 
 func (router *Router) Serve() {
 	fmt.Println("Server is listening on", router.Addr)

@@ -12,5 +12,5 @@ func Execute() {
 
 	flag.Parse()
 
-	router.New(fs.UIDist, *port).RegisterRouter().Serve()
+	router.New(fs.UIDist, *port).RegisterSPA().RegisterSocket().Serve()
 }
