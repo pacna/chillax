@@ -1,33 +1,36 @@
 package router
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 )
 
-type socket struct {}
+type socket struct {
+	client *client
+}
 
 func (socket socket) ServeHTTP(w http.ResponseWriter, r *http.Request)  {
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
-	fmt.Println("hi")
 	if err != nil {
-		// handle error
+		log.Printf("Unable to upgrade: %s", err)
+		return
 	}
+
 	go func() {
-		defer conn.Close()
+		socket.client.add(&conn)
+		defer socket.client.remove(&conn)
 
 		for {
 			msg, op, err := wsutil.ReadClientData(conn)
 			if err != nil {
-				// handle error
+				log.Printf("Unable to read message: %v", err)
+				return
 			}
-			err = wsutil.WriteServerMessage(conn, op, msg)
-			if err != nil {
-				// handle error
-			}
+
+			socket.client.broadcast(msg, op)
 		}
 	}()
 }

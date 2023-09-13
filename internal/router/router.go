@@ -3,7 +3,9 @@ package router
 import (
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -32,7 +34,12 @@ func (router *Router) RegisterSPA() *Router {
 }
 
 func (router *Router) RegisterSocket() *Router {
-	http.Handle("/ws", socket{})
+	http.Handle("/ws", socket{
+		client:  &client{
+			conns: make(map[*net.Conn]struct{}),
+			mux: sync.Mutex{},
+		},
+	})
 
 	return router;
 }
