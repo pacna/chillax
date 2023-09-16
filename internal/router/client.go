@@ -14,7 +14,6 @@ type client struct {
 	mux   sync.Mutex
 }
 
-
 func (client *client) add(conn *net.Conn) {
 	client.mux.Lock()
 	defer client.mux.Unlock()

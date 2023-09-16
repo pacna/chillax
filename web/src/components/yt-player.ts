@@ -5,7 +5,7 @@ import { TWElement } from "./tw-element";
 import "@material/web/slider/slider";
 import "@material/web/icon/icon";
 import "@material/web/iconbutton/icon-button";
-import { YTPlayerState } from "../types";
+import { YTPlayerEvent, YTPlayerState } from "../types";
 
 @customElement("yt-player")
 export class YTPlayer extends TWElement {
@@ -13,10 +13,10 @@ export class YTPlayer extends TWElement {
     videoId: string;
 
     @state()
-    private _showPlay: boolean = false;
+    showPlay: boolean = false;
 
-    @state()
-    private _currentTime: number = 0;
+    @property({ type: Number })
+    currentTime: number = 0;
 
     private _player: any;
 
@@ -57,7 +57,7 @@ export class YTPlayer extends TWElement {
                     controls: 0,
                     disablekb: 1,
                     rel: 0,
-                    autoplay: 1,
+                    mute: 1, // in order for autoplay to work across multiple browsers, video must be muted
                 },
                 events: {
                     onReady: this.onPlayerReady.bind(this),
@@ -73,12 +73,23 @@ export class YTPlayer extends TWElement {
                 return;
             }
 
-            this._currentTime = this._player?.getCurrentTime() ?? 0;
+            this.currentTime = this._player?.getCurrentTime() ?? 0;
+            this.dispatchEvent(
+                new CustomEvent("updated", {
+                    detail: {
+                        videoId: this.videoId,
+                        state: this._player.getPlayerState(),
+                        currentTime: this.currentTime,
+                    } as YTPlayerEvent,
+                })
+            );
         }, 100);
     }
 
     private onPlayerReady(event: { target: any; data: any }): void {
-        console.log("hi", event);
+        if (this.videoId) {
+            event.target.loadVideoById(this.videoId);
+        }
     }
 
     private onPlayerStateChange(event: { target: any; data: any }): void {
@@ -89,17 +100,17 @@ export class YTPlayer extends TWElement {
 
     private pauseVideo(): void {
         this._player.pauseVideo();
-        this._showPlay = true;
+        this.showPlay = true;
     }
 
     private playVideo(): void {
         this._player.playVideo();
-        this._showPlay = false;
+        this.showPlay = false;
     }
 
     private stopVideo(): void {
         this._player.stopVideo();
-        this._showPlay = true;
+        this.showPlay = true;
     }
 
     private updateCurrentProgression(event: PointerEvent): void {
@@ -113,8 +124,24 @@ export class YTPlayer extends TWElement {
         this._player.seekTo((event.target as HTMLInputElement).value);
     }
 
+    private displayToggleVolume(): TemplateResult {
+        if (this._player?.isMuted()) {
+            return html`
+                <md-icon-button @click=${() => this._player.unMute()}>
+                    <md-icon>volume_off</md-icon>
+                </md-icon-button>
+            `;
+        }
+
+        return html`
+            <md-icon-button @click=${() => this._player.mute()}>
+                <md-icon>volume_up</md-icon>
+            </md-icon-button>
+        `;
+    }
+
     private displayToggleAction(): TemplateResult {
-        if (this._showPlay) {
+        if (this.showPlay) {
             return html`
                 <md-icon-button @click=${this.playVideo}>
                     <md-icon>play_arrow</md-icon>
@@ -132,15 +159,18 @@ export class YTPlayer extends TWElement {
     protected render(): TemplateResult {
         return html`
             <article class="animate-fade">
+                <h2 class="text-center text-2xl font-bold mb-4">
+                    ${this._player?.videoTitle}
+                </h2>
                 <div id="player" class="pointer-events-none"></div>
                 <section class="flex items-center justify-center mt-4">
-                    ${this.displayToggleAction()}
+                    ${this.displayToggleAction()} ${this.displayToggleVolume()}
                     <md-slider
-                        class="w-[1120px]"
+                        class="w-[1080px]"
                         @click=${this.updateCurrentProgression}
                         min="0"
                         max=${this._player?.getDuration()}
-                        value=${this._currentTime}
+                        value=${this.currentTime}
                     ></md-slider>
                 </section>
             </article>

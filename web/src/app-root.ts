@@ -6,6 +6,7 @@ import "./components/yt-player";
 import "./components/yt-form";
 import { TWElement } from "./components/tw-element";
 import { SocketClient } from "./socket-client";
+import { YTPlayerEvent } from "./types";
 
 @customElement("app-root")
 export class AppRoot extends TWElement {
@@ -26,22 +27,33 @@ export class AppRoot extends TWElement {
 
     private initializeWebSocket(): void {
         this._socket = new SocketClient(import.meta.env.VITE_WS_URL);
-        this._socket.send("hi");
         this._socket.handleReceivedMsg((msg: string) => {
-            console.log("msg", msg);
+            const incomingYTPlayerEvent: YTPlayerEvent = JSON.parse(msg);
+            if (this._ytId !== incomingYTPlayerEvent.videoId) {
+                this._ytId = incomingYTPlayerEvent.videoId;
+            }
         });
     }
 
     private displayContent(): TemplateResult {
         if (this._ytId) {
-            return html`<yt-player .videoId=${this._ytId} />`;
+            return html`
+                <yt-player
+                    .videoId=${this._ytId}
+                    @updated=${this.handleYTPlayerUpdates}
+                />
+            `;
         }
 
-        return html` <yt-form @launched=${this.handleLoaded} /> `;
+        return html` <yt-form @launched=${this.handleLaunched} /> `;
     }
 
-    private handleLoaded(event: CustomEvent): void {
+    private handleLaunched(event: CustomEvent): void {
         this._ytId = event.detail.id;
+    }
+
+    private handleYTPlayerUpdates(event: CustomEvent): void {
+        this._socket.send<YTPlayerEvent>(event.detail);
     }
 
     protected render(): TemplateResult {
@@ -49,7 +61,7 @@ export class AppRoot extends TWElement {
             <top-nav>
                 <h1 class="text-2xl font-bold">Chillax</h1>
             </top-nav>
-            <main class="mt-24 flex justify-center">
+            <main class="mt-16 flex justify-center">
                 ${this.displayContent()}
             </main>
         `;
