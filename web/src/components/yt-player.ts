@@ -5,18 +5,61 @@ import { TWElement } from "./tw-element";
 import "@material/web/slider/slider";
 import "@material/web/icon/icon";
 import "@material/web/iconbutton/icon-button";
-import { YTPlayerEvent, YTPlayerState } from "../types";
+import { ValueChangeDetector, YTPlayerEvent, YTPlayerState } from "../types";
 
 @customElement("yt-player")
 export class YTPlayer extends TWElement {
-    @property({ type: String })
-    videoId: string;
+    @property({ type: Object })
+    set incomingEvent(incomingEvent: YTPlayerEvent) {
+        if (!incomingEvent) return;
+
+        if (
+            ValueChangeDetector<string>(this._videoId).hasValueAndChanged(
+                incomingEvent.videoId
+            )
+        ) {
+            this._videoId = incomingEvent.videoId;
+        }
+
+        if (this._player) {
+            if (
+                ValueChangeDetector<YTPlayerState>(
+                    this._player?.getPlayerState()
+                ).hasValueAndChanged(incomingEvent.state)
+            ) {
+                switch (incomingEvent.state) {
+                    case YTPlayerState.PLAYING:
+                        this.playVideo();
+                        break;
+                    case YTPlayerState.PAUSED:
+                        this.pauseVideo();
+                        break;
+                    case YTPlayerState.ENDED:
+                        this.stopVideo();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (
+                Math.abs(
+                    this._player.getCurrentTime() - incomingEvent.currentTime
+                ) > 1
+            ) {
+                this._player.seekTo(incomingEvent.currentTime);
+            }
+        }
+    }
 
     @state()
-    showPlay: boolean = false;
+    private _videoId: string;
 
-    @property({ type: Number })
-    currentTime: number = 0;
+    @state()
+    private _showPlay: boolean = false;
+
+    @state()
+    private _currentTime: number = 0;
 
     private _player: any;
 
@@ -52,12 +95,12 @@ export class YTPlayer extends TWElement {
             {
                 height: "640",
                 width: "1140",
-                videoId: this.videoId,
+                videoId: this._videoId,
                 playerVars: {
                     controls: 0,
                     disablekb: 1,
                     rel: 0,
-                    mute: 1, // in order for autoplay to work across multiple browsers, video must be muted
+                    mute: 1, // in order for autoplay to work across multiple browsers, video must be muted,
                 },
                 events: {
                     onReady: this.onPlayerReady.bind(this),
@@ -69,26 +112,17 @@ export class YTPlayer extends TWElement {
 
     private runProgressLoop(): void {
         this._progressInterval = setInterval(() => {
-            if (!this._player || !this.videoId) {
+            if (!this._player || !this._videoId) {
                 return;
             }
 
-            this.currentTime = this._player?.getCurrentTime() ?? 0;
-            this.dispatchEvent(
-                new CustomEvent("updated", {
-                    detail: {
-                        videoId: this.videoId,
-                        state: this._player.getPlayerState(),
-                        currentTime: this.currentTime,
-                    } as YTPlayerEvent,
-                })
-            );
+            this._currentTime = this._player?.getCurrentTime() ?? 0;
         }, 100);
     }
 
     private onPlayerReady(event: { target: any; data: any }): void {
-        if (this.videoId) {
-            event.target.loadVideoById(this.videoId);
+        if (this._videoId) {
+            event.target.loadVideoById(this._videoId);
         }
     }
 
@@ -96,21 +130,35 @@ export class YTPlayer extends TWElement {
         if (event.data === YTPlayerState.ENDED) {
             this.stopVideo();
         }
+
+        this.syncVideo();
     }
 
     private pauseVideo(): void {
         this._player.pauseVideo();
-        this.showPlay = true;
+        this._showPlay = true;
     }
 
     private playVideo(): void {
         this._player.playVideo();
-        this.showPlay = false;
+        this._showPlay = false;
     }
 
     private stopVideo(): void {
         this._player.stopVideo();
-        this.showPlay = true;
+        this._showPlay = true;
+    }
+
+    private syncVideo(): void {
+        this.dispatchEvent(
+            new CustomEvent("updated", {
+                detail: {
+                    videoId: this._videoId,
+                    state: this._player.getPlayerState(),
+                    currentTime: this._player.getCurrentTime(),
+                } as YTPlayerEvent,
+            })
+        );
     }
 
     private updateCurrentProgression(event: PointerEvent): void {
@@ -141,7 +189,7 @@ export class YTPlayer extends TWElement {
     }
 
     private displayToggleAction(): TemplateResult {
-        if (this.showPlay) {
+        if (this._showPlay) {
             return html`
                 <md-icon-button @click=${this.playVideo}>
                     <md-icon>play_arrow</md-icon>
@@ -165,12 +213,15 @@ export class YTPlayer extends TWElement {
                 <div id="player" class="pointer-events-none"></div>
                 <section class="flex items-center justify-center mt-4">
                     ${this.displayToggleAction()} ${this.displayToggleVolume()}
+                    <md-icon-button @click=${this.syncVideo}>
+                        <md-icon>sync</md-icon>
+                    </md-icon-button>
                     <md-slider
-                        class="w-[1080px]"
+                        class="w-[1040px]"
                         @click=${this.updateCurrentProgression}
                         min="0"
                         max=${this._player?.getDuration()}
-                        value=${this.currentTime}
+                        value=${this._currentTime}
                     ></md-slider>
                 </section>
             </article>

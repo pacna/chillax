@@ -6,12 +6,12 @@ import "./components/yt-player";
 import "./components/yt-form";
 import { TWElement } from "./components/tw-element";
 import { SocketClient } from "./socket-client";
-import { YTPlayerEvent } from "./types";
+import { YTPlayerEvent, YTPlayerState } from "./types";
 
 @customElement("app-root")
 export class AppRoot extends TWElement {
     @state()
-    private _ytId: string;
+    private _incomingSocketEvent: YTPlayerEvent;
 
     private _socket: SocketClient;
 
@@ -28,18 +28,15 @@ export class AppRoot extends TWElement {
     private initializeWebSocket(): void {
         this._socket = new SocketClient(import.meta.env.VITE_WS_URL);
         this._socket.handleReceivedMsg((msg: string) => {
-            const incomingYTPlayerEvent: YTPlayerEvent = JSON.parse(msg);
-            if (this._ytId !== incomingYTPlayerEvent.videoId) {
-                this._ytId = incomingYTPlayerEvent.videoId;
-            }
+            this._incomingSocketEvent = JSON.parse(msg);
         });
     }
 
     private displayContent(): TemplateResult {
-        if (this._ytId) {
+        if (this._incomingSocketEvent) {
             return html`
                 <yt-player
-                    .videoId=${this._ytId}
+                    .incomingEvent=${this._incomingSocketEvent}
                     @updated=${this.handleYTPlayerUpdates}
                 />
             `;
@@ -49,7 +46,11 @@ export class AppRoot extends TWElement {
     }
 
     private handleLaunched(event: CustomEvent): void {
-        this._ytId = event.detail.id;
+        this._incomingSocketEvent = {
+            videoId: event.detail.id,
+            state: YTPlayerState.UNSTARTED,
+            currentTime: 0,
+        } as YTPlayerEvent;
     }
 
     private handleYTPlayerUpdates(event: CustomEvent): void {
