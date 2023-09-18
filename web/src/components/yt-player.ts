@@ -5,63 +5,29 @@ import { TWElement } from "./tw-element";
 import "@material/web/slider/slider";
 import "@material/web/icon/icon";
 import "@material/web/iconbutton/icon-button";
-import { ValueChangeDetector, YTPlayerEvent, YTPlayerState } from "../types";
+import {
+    ValueChangeDetector,
+    YTSocketEvent,
+    YTPlayerState,
+    YTPlayerEvent,
+    YouTubePlayer,
+} from "../types";
 
 @customElement("yt-player")
 export class YTPlayer extends TWElement {
     @property({ type: Object })
-    set incomingEvent(incomingEvent: YTPlayerEvent) {
+    set incomingEvent(incomingEvent: YTSocketEvent) {
         if (!incomingEvent) return;
-
-        if (
-            ValueChangeDetector<string>(this._videoId).hasValueAndChanged(
-                incomingEvent.videoId
-            )
-        ) {
-            this._videoId = incomingEvent.videoId;
-        }
-
-        if (this._player) {
-            if (
-                ValueChangeDetector<YTPlayerState>(
-                    this._player?.getPlayerState()
-                ).hasValueAndChanged(incomingEvent.state)
-            ) {
-                switch (incomingEvent.state) {
-                    case YTPlayerState.PLAYING:
-                        this.playVideo();
-                        break;
-                    case YTPlayerState.PAUSED:
-                        this.pauseVideo();
-                        break;
-                    case YTPlayerState.ENDED:
-                        this.stopVideo();
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            if (
-                Math.abs(
-                    this._player.getCurrentTime() - incomingEvent.currentTime
-                ) > 1
-            ) {
-                this._player.seekTo(incomingEvent.currentTime);
-            }
-        }
+        this.handleIncomingEvent(incomingEvent);
     }
 
     @state()
     private _videoId: string;
 
     @state()
-    private _showPlay: boolean = false;
-
-    @state()
     private _currentTime: number = 0;
 
-    private _player: any;
+    private _player: YouTubePlayer;
 
     private _progressInterval: number;
 
@@ -97,6 +63,7 @@ export class YTPlayer extends TWElement {
                 width: "1140",
                 videoId: this._videoId,
                 playerVars: {
+                    // https://developers.google.com/youtube/player_parameters
                     controls: 0,
                     disablekb: 1,
                     rel: 0,
@@ -117,36 +84,21 @@ export class YTPlayer extends TWElement {
             }
 
             this._currentTime = this._player?.getCurrentTime() ?? 0;
-        }, 100);
+        }, 200);
     }
 
-    private onPlayerReady(event: { target: any; data: any }): void {
+    private onPlayerReady(event: Pick<YTPlayerEvent, "target">): void {
         if (this._videoId) {
-            event.target.loadVideoById(this._videoId);
+            event.target.loadVideoById(this._videoId, this._currentTime);
         }
     }
 
-    private onPlayerStateChange(event: { target: any; data: any }): void {
+    private onPlayerStateChange(event: YTPlayerEvent): void {
         if (event.data === YTPlayerState.ENDED) {
-            this.stopVideo();
+            event.target.pauseVideo(); // pausing the video is only way to prevent YT from cueing up another video
         }
 
         this.syncVideo();
-    }
-
-    private pauseVideo(): void {
-        this._player.pauseVideo();
-        this._showPlay = true;
-    }
-
-    private playVideo(): void {
-        this._player.playVideo();
-        this._showPlay = false;
-    }
-
-    private stopVideo(): void {
-        this._player.stopVideo();
-        this._showPlay = true;
     }
 
     private syncVideo(): void {
@@ -156,7 +108,7 @@ export class YTPlayer extends TWElement {
                     videoId: this._videoId,
                     state: this._player.getPlayerState(),
                     currentTime: this._player.getCurrentTime(),
-                } as YTPlayerEvent,
+                } as YTSocketEvent,
             })
         );
     }
@@ -169,7 +121,45 @@ export class YTPlayer extends TWElement {
             return;
         }
 
-        this._player.seekTo((event.target as HTMLInputElement).value);
+        this._player.seekTo(parseInt((event.target as HTMLInputElement).value));
+    }
+
+    private handleIncomingEvent(incomingEvent: YTSocketEvent): void {
+        if (
+            ValueChangeDetector<string>(this._videoId).hasValueAndChanged(
+                incomingEvent.videoId
+            )
+        ) {
+            this._videoId = incomingEvent.videoId;
+        }
+
+        if (this._player) {
+            if (
+                ValueChangeDetector<YTPlayerState>(
+                    this._player?.getPlayerState()
+                ).hasValueAndChanged(incomingEvent.state)
+            ) {
+                switch (incomingEvent.state) {
+                    case YTPlayerState.PLAYING:
+                        this._player.playVideo();
+                        break;
+                    case YTPlayerState.PAUSED:
+                    case YTPlayerState.ENDED:
+                        this._player.pauseVideo();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (
+                Math.abs(
+                    this._player.getCurrentTime() - incomingEvent.currentTime
+                ) > 1
+            ) {
+                this._player.seekTo(incomingEvent.currentTime);
+            }
+        }
     }
 
     private displayToggleVolume(): TemplateResult {
@@ -189,16 +179,16 @@ export class YTPlayer extends TWElement {
     }
 
     private displayToggleAction(): TemplateResult {
-        if (this._showPlay) {
+        if (this._player?.getPlayerState() !== YTPlayerState.PLAYING) {
             return html`
-                <md-icon-button @click=${this.playVideo}>
+                <md-icon-button @click=${() => this._player.playVideo()}>
                     <md-icon>play_arrow</md-icon>
                 </md-icon-button>
             `;
         }
 
         return html`
-            <md-icon-button @click=${this.pauseVideo}>
+            <md-icon-button @click=${() => this._player.pauseVideo()}>
                 <md-icon>pause</md-icon>
             </md-icon-button>
         `;

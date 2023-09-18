@@ -1,7 +1,7 @@
+import { YouTubePlayer } from "./youtube-player";
 import { YTPlayerState } from "./yt-player-state";
 
 export interface YTPlayerEvent {
-    videoId: string;
-    state: YTPlayerState;
-    currentTime: number;
+    target: YouTubePlayer;
+    data: YTPlayerState;
 }

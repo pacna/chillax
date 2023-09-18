@@ -6,12 +6,12 @@ import "./components/yt-player";
 import "./components/yt-form";
 import { TWElement } from "./components/tw-element";
 import { SocketClient } from "./socket-client";
-import { YTPlayerEvent, YTPlayerState } from "./types";
+import { YTSocketEvent, YTPlayerState } from "./types";
 
 @customElement("app-root")
 export class AppRoot extends TWElement {
     @state()
-    private _incomingSocketEvent: YTPlayerEvent;
+    private _incomingSocketEvent: YTSocketEvent;
 
     private _socket: SocketClient;
 
@@ -50,11 +50,11 @@ export class AppRoot extends TWElement {
             videoId: event.detail.id,
             state: YTPlayerState.UNSTARTED,
             currentTime: 0,
-        } as YTPlayerEvent;
+        } as YTSocketEvent;
     }
 
     private handleYTPlayerUpdates(event: CustomEvent): void {
-        this._socket.send<YTPlayerEvent>(event.detail);
+        this._socket.send<YTSocketEvent>(event.detail);
     }
 
     protected render(): TemplateResult {
