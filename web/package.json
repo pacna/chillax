@@ -9,12 +9,12 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@material/web": "^1.0.0-pre.17",
+        "@material/web": "^1.0.1",
         "lit": "^2.7.6"
     },
     "devDependencies": {
-        "autoprefixer": "^10.4.15",
-        "postcss": "^8.4.28",
+        "autoprefixer": "^10.4.16",
+        "postcss": "^8.4.31",
         "tailwindcss": "^3.3.3",
         "typescript": "^5.0.2",
         "vite": "^4.4.5"
