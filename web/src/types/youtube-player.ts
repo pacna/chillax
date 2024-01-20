@@ -1,7 +1,7 @@
 import { YTPlayerState } from "./yt-player-state";
 
 // https://developers.google.com/youtube/iframe_api_reference#Operations
-export interface YouTubePlayer {
+export type YouTubePlayer = {
     videoTitle: string;
     playVideo(): void;
     pauseVideo(): void;
@@ -14,4 +14,4 @@ export interface YouTubePlayer {
     mute(): void;
     unMute(): void;
     loadVideoById(videoId: string, startSeconds: number): void;
-}
+};

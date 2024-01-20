@@ -1,7 +1,7 @@
 import { YTPlayerState } from "./yt-player-state";
 
-export interface YTSocketEvent {
+export type YTSocketEvent = {
     videoId: string;
     state: YTPlayerState;
     currentTime: number;
-}
+};
